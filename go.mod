@@ -1,4 +1,4 @@
-module rtusensor
+module github.com/mokhae/rtusensor
 
 go 1.15
 
