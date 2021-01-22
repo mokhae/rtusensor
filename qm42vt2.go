@@ -54,6 +54,36 @@ type qm42vt2 struct {
 	X_high_freq_rms_acceleration string `json:"x_high_freq_rms_acceleration"`
 }
 
+type qm42vt2_cloud struct {
+	Z_rms_velocity_in_per_sec    uint16 `json:"z_rms_velocity_in_per_sec"`
+	Z_rms_velocity_mm_per_sec    uint16 `json:"z_rms_velocity_mm_per_sec"`
+	Temp_dF                      uint16 `json:"temp_dF"`
+	Temp_dC                      uint16 `json:"temp_dC"`
+	X_rms_velocity_in_per_sec    uint16 `json:"x_rms_velocity_in_per_sec"`
+	X_rms_velocity_mm_per_sec    uint16 `json:"x_rms_velocity_mm_per_sec"`
+	Z_peak_acceleration          uint16 `json:"z_peak_acceleration"`
+	X_peak_acceleration          uint16 `json:"x_peak_acceleration"`
+	Z_peak_velocity_comp_freq    uint16 `json:"z_peak_velocity_comp_freq"`
+	X_peak_velocity_comp_freq    uint16 `json:"x_peak_velocity_comp_freq"`
+	Z_rms_acceleration           uint16 `json:"z_rms_acceleration"`
+	X_rms_acceleration           uint16 `json:"x_rms_acceleration"`
+	Z_kurtosis                   uint16 `json:"z_kurtosis"`
+	X_kurtosis                   uint16 `json:"x_kurtosis"`
+	Z_crest                      uint16 `json:"z_crest"`
+	X_crest                      uint16 `json:"x_crest"`
+	Z_peak_velocity_in_per_sec   uint16 `json:"z_peak_velocity_in_per_sec"`
+	Z_peak_velocity_mm_per_sec   uint16 `json:"z_peak_velocity_mm_per_sec"`
+	X_peak_velocity_in_per_sec   uint16 `json:"x_peak_velocity_in_per_sec"`
+	X_peak_velocity_mm_per_sec   uint16 `json:"x_peak_velocity_mm_per_sec"`
+	Z_high_freq_rms_acceleration uint16 `json:"z_high_freq_rms_acceleration"`
+	X_high_freq_rms_acceleration uint16 `json:"x_high_freq_rms_acceleration"`
+}
+
+type qmvt2 struct {
+	cloud qm42vt2_cloud
+	mqtt  qm42vt2
+}
+
 type Vibration struct {
 	Id    byte    `json:"id"`
 	Stime string  `json:"stime"`
@@ -184,35 +214,64 @@ func (m MBClient) Run() {
 						//log.Println("Len : " , len(results))
 						//log.Println("data : " , results)
 						var i int = 3
-						qm42 := qm42vt2{
-							Z_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}), 10000, 4),
-							Z_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}), 1000, 3),
-							Temp_dF:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}), 100, 2),
-							Temp_dC:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}), 100, 2),
-							X_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}), 10000, 4),
-							X_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}), 1000, 3),
-							Z_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}), 1000, 3),
-							X_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}), 1000, 3),
-							Z_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}), 10, 1),
-							X_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}), 10, 1),
-							Z_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}), 1000, 3),
-							X_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}), 1000, 3),
-							Z_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}), 1000, 3),
-							X_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}), 1000, 3),
-							Z_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}), 1000, 3),
-							X_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}), 1000, 3),
-							Z_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}), 10000, 4),
-							Z_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}), 1000, 3),
-							X_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}), 10000, 4),
-							X_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}), 1000, 3),
-							Z_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}), 1000, 3),
-							X_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}), 1000, 3),
+						var qm42 qmvt2
+						if m.useTurckCloud {
+							qm42.cloud = qm42vt2_cloud{
+								Z_rms_velocity_in_per_sec:    binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}),
+								Z_rms_velocity_mm_per_sec:    binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}),
+								Temp_dF:                      binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}),
+								Temp_dC:                      binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}),
+								X_rms_velocity_in_per_sec:    binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}),
+								X_rms_velocity_mm_per_sec:    binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}),
+								Z_peak_acceleration:          binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}),
+								X_peak_acceleration:          binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}),
+								Z_peak_velocity_comp_freq:    binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}),
+								X_peak_velocity_comp_freq:    binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}),
+								Z_rms_acceleration:           binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}),
+								X_rms_acceleration:           binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}),
+								Z_kurtosis:                   binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}),
+								X_kurtosis:                   binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}),
+								Z_crest:                      binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}),
+								X_crest:                      binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}),
+								Z_peak_velocity_in_per_sec:   binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}),
+								Z_peak_velocity_mm_per_sec:   binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}),
+								X_peak_velocity_in_per_sec:   binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}),
+								X_peak_velocity_mm_per_sec:   binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}),
+								Z_high_freq_rms_acceleration: binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}),
+								X_high_freq_rms_acceleration: binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}),
+							}
+						} else {
+							qm42.mqtt = qm42vt2{
+								Z_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}), 10000, 4),
+								Z_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}), 1000, 3),
+								Temp_dF:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}), 100, 2),
+								Temp_dC:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}), 100, 2),
+								X_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}), 10000, 4),
+								X_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}), 1000, 3),
+								Z_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}), 1000, 3),
+								X_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}), 1000, 3),
+								Z_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}), 10, 1),
+								X_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}), 10, 1),
+								Z_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}), 1000, 3),
+								X_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}), 1000, 3),
+								Z_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}), 1000, 3),
+								X_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}), 1000, 3),
+								Z_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}), 1000, 3),
+								X_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}), 1000, 3),
+								Z_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}), 10000, 4),
+								Z_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}), 1000, 3),
+								X_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}), 10000, 4),
+								X_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}), 1000, 3),
+								Z_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}), 1000, 3),
+								X_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}), 1000, 3),
+							}
 						}
+
 						//log.Println("Z Axis Velocity : ", qm42.x_high_freq_rms_acceleration)
 						var file []byte
 						var err error
 						if m.useTurckCloud {
-							file, err = json.MarshalIndent(qm42, "", " ")
+							file, err = json.MarshalIndent(qm42.cloud, "", " ")
 							if err != nil {
 								log.Fatal(err)
 							}
@@ -220,7 +279,7 @@ func (m MBClient) Run() {
 							var vibData *Vibration = &Vibration{
 								Id:    id,
 								Stime: time.Now().Format("2006-01-01 15:04:05"),
-								Data:  qm42,
+								Data:  qm42.mqtt,
 							}
 							file, err = json.MarshalIndent(vibData, "", " ")
 							if err != nil {
