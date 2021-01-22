@@ -14,19 +14,19 @@ import (
 )
 
 var (
-	task_time int
-	addr string
-	sensor_id byte
-	BaudRate int
-	DataBits int
-	StopBits int
-	logDir string
-	logginglevel string
-	outFile string
-	outFlag bool
+	task_time     int
+	addr          string
+	sensor_id     byte
+	BaudRate      int
+	DataBits      int
+	StopBits      int
+	logDir        string
+	logginglevel  string
+	outFile       string
+	outFlag       bool
 	sensorTimeout float64
-	startAddress uint16
-	quantity uint16
+	startAddress  uint16
+	quantity      uint16
 )
 
 type qm42vt2 struct {
@@ -55,14 +55,15 @@ type qm42vt2 struct {
 }
 
 type Vibration struct {
-	Id 		byte 	`json:"id"`
-	Stime   string  `json:"stime"`
-	Data 	qm42vt2 `json:"data"`
+	Id    byte    `json:"id"`
+	Stime string  `json:"stime"`
+	Data  qm42vt2 `json:"data"`
 }
 type MBClient struct {
-	Name 	string
-	Configdata *map[string]interface{}
-	Buffer chan string
+	Name          string
+	Configdata    *map[string]interface{}
+	Buffer        chan string
+	useTurckCloud bool
 }
 
 func convStringData(data uint16, decimalNum uint16, decimalPoint uint16) string {
@@ -87,31 +88,31 @@ func convStringData(data uint16, decimalNum uint16, decimalPoint uint16) string 
 
 }
 
-func New(name string, configdata *map[string]interface{}, buffer *chan string) *MBClient {
-	return &MBClient{Name: name, Configdata: configdata, Buffer: *buffer}
+func New(name string, configdata *map[string]interface{}, buffer *chan string, useTurckCloudFlag *bool) *MBClient {
+	return &MBClient{Name: name, Configdata: configdata, Buffer: *buffer, useTurckCloud: *useTurckCloudFlag}
 }
 
 func (m MBClient) Run() {
 
 	config := *m.Configdata
 
-	task_time, _ =  strconv.Atoi(fmt.Sprintf("%v", config["task_update_interval_ms"]))
+	task_time, _ = strconv.Atoi(fmt.Sprintf("%v", config["task_update_interval_ms"]))
 	addr = fmt.Sprintf("%v", config["modbus_port"])
 
 	//sensorId32, _ := strconv.ParseUint(fmt.Sprintf("%v",config["sensor_id"]), 10, 32)
 	//sensor_id = byte(sensorId32)
-	BaudRate, _ =  strconv.Atoi(fmt.Sprintf("%v", config["sensor_baudrate"]))
-	DataBits, _ =  strconv.Atoi(fmt.Sprintf("%v", config["sensor_bytesize"]))
-	StopBits, _ =  strconv.Atoi(fmt.Sprintf("%v", config["sensor_stopbits"]))
+	BaudRate, _ = strconv.Atoi(fmt.Sprintf("%v", config["sensor_baudrate"]))
+	DataBits, _ = strconv.Atoi(fmt.Sprintf("%v", config["sensor_bytesize"]))
+	StopBits, _ = strconv.Atoi(fmt.Sprintf("%v", config["sensor_stopbits"]))
 	logDir = fmt.Sprintf("%v", config["logging_dir"])
 	logginglevel = fmt.Sprintf("%v", config["logging_level"])
 	outFile = fmt.Sprintf("%v", config["output_file_json"])
 	outFlag, _ = strconv.ParseBool(fmt.Sprintf("%v", config["write_output_file_json"]))
 	sensorTimeout, _ = strconv.ParseFloat(fmt.Sprintf("%v", config["sensor_timeout"]), 64)
 
-	startAddress32, _ := strconv.ParseUint(fmt.Sprintf("%v",config["start_address"]), 10, 32)
+	startAddress32, _ := strconv.ParseUint(fmt.Sprintf("%v", config["start_address"]), 10, 32)
 	startAddress = uint16(startAddress32)
-	quantity32, _ := strconv.ParseUint(fmt.Sprintf("%v",config["quantity"]), 10, 32)
+	quantity32, _ := strconv.ParseUint(fmt.Sprintf("%v", config["quantity"]), 10, 32)
 
 	quantity = uint16(quantity32)
 
@@ -142,7 +143,7 @@ func (m MBClient) Run() {
 	} else {
 		ticker := time.NewTicker(time.Millisecond * time.Duration(task_time))
 		for {
-			var sid string = fmt.Sprintf("%v",config["sensor_id"])
+			var sid string = fmt.Sprintf("%v", config["sensor_id"])
 
 			sensorid := strings.Split(sid, ",")
 			if len(sensorid) > 0 {
@@ -168,7 +169,6 @@ func (m MBClient) Run() {
 					*/
 					trace := true
 					var responsePause int = 100
-
 
 					select {
 
@@ -207,18 +207,27 @@ func (m MBClient) Run() {
 							X_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}), 1000, 3),
 							Z_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}), 1000, 3),
 							X_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}), 1000, 3),
-
 						}
 						//log.Println("Z Axis Velocity : ", qm42.x_high_freq_rms_acceleration)
-						var vibData *Vibration = &Vibration{
-							Id: id,
-							Stime: time.Now().Format("2006-01-01 15:04:05"),
-							Data: qm42,
+						var file []byte
+						var err error
+						if m.useTurckCloud {
+							file, err = json.MarshalIndent(qm42, "", " ")
+							if err != nil {
+								log.Fatal(err)
+							}
+						} else {
+							var vibData *Vibration = &Vibration{
+								Id:    id,
+								Stime: time.Now().Format("2006-01-01 15:04:05"),
+								Data:  qm42,
+							}
+							file, err = json.MarshalIndent(vibData, "", " ")
+							if err != nil {
+								log.Fatal(err)
+							}
 						}
-						file, err := json.MarshalIndent(vibData, "", " ")
-						if err != nil {
-							log.Fatal(err)
-						}
+
 						//log.Println("Modbus ID : ", id, string(file))
 
 						m.Buffer <- string(file)
@@ -229,8 +238,6 @@ func (m MBClient) Run() {
 						}
 
 					}
-
-
 
 					//time.Sleep(time.Millisecond * 1000)
 				}
@@ -244,23 +251,23 @@ func (m MBClient) Run() {
 func (m MBClient) RunSimulation() {
 	config := *m.Configdata
 
-	task_time, _ =  strconv.Atoi(fmt.Sprintf("%v", config["task_update_interval_ms"]))
+	task_time, _ = strconv.Atoi(fmt.Sprintf("%v", config["task_update_interval_ms"]))
 	addr = fmt.Sprintf("%v", config["modbus_port"])
 
 	//sensorId32, _ := strconv.ParseUint(fmt.Sprintf("%v",config["sensor_id"]), 10, 32)
 	//sensor_id = byte(sensorId32)
-	BaudRate, _ =  strconv.Atoi(fmt.Sprintf("%v", config["sensor_baudrate"]))
-	DataBits, _ =  strconv.Atoi(fmt.Sprintf("%v", config["sensor_bytesize"]))
-	StopBits, _ =  strconv.Atoi(fmt.Sprintf("%v", config["sensor_stopbits"]))
+	BaudRate, _ = strconv.Atoi(fmt.Sprintf("%v", config["sensor_baudrate"]))
+	DataBits, _ = strconv.Atoi(fmt.Sprintf("%v", config["sensor_bytesize"]))
+	StopBits, _ = strconv.Atoi(fmt.Sprintf("%v", config["sensor_stopbits"]))
 	logDir = fmt.Sprintf("%v", config["logging_dir"])
 	logginglevel = fmt.Sprintf("%v", config["logging_level"])
 	outFile = fmt.Sprintf("%v", config["output_file_json"])
 	outFlag, _ = strconv.ParseBool(fmt.Sprintf("%v", config["write_output_file_json"]))
 	sensorTimeout, _ = strconv.ParseFloat(fmt.Sprintf("%v", config["sensor_timeout"]), 64)
 
-	startAddress32, _ := strconv.ParseUint(fmt.Sprintf("%v",config["start_address"]), 10, 32)
+	startAddress32, _ := strconv.ParseUint(fmt.Sprintf("%v", config["start_address"]), 10, 32)
 	startAddress = uint16(startAddress32)
-	quantity32, _ := strconv.ParseUint(fmt.Sprintf("%v",config["quantity"]), 10, 32)
+	quantity32, _ := strconv.ParseUint(fmt.Sprintf("%v", config["quantity"]), 10, 32)
 	quantity = uint16(quantity32)
 
 	log.Println("Name ", m.Name)
@@ -285,7 +292,7 @@ func (m MBClient) RunSimulation() {
 
 	ticker := time.NewTicker(time.Millisecond * time.Duration(task_time))
 	for {
-		var sid string = fmt.Sprintf("%v",config["sensor_id"])
+		var sid string = fmt.Sprintf("%v", config["sensor_id"])
 
 		sensorid := strings.Split(sid, ",")
 		if len(sensorid) > 0 {
@@ -299,7 +306,7 @@ func (m MBClient) RunSimulation() {
 				case <-ticker.C:
 					log.Println(fmt.Sprintf("Reading Start: %d", id))
 
-					results :=  randUint16(0, 65535, 22)
+					results := randUint16(0, 65535, 22)
 
 					qm42 := qm42vt2{
 						Z_rms_velocity_in_per_sec:    convStringData(results[0], 10000, 4),
@@ -324,13 +331,12 @@ func (m MBClient) RunSimulation() {
 						X_peak_velocity_mm_per_sec:   convStringData(results[19], 1000, 3),
 						Z_high_freq_rms_acceleration: convStringData(results[20], 1000, 3),
 						X_high_freq_rms_acceleration: convStringData(results[21], 1000, 3),
-
 					}
 					//log.Println("Z Axis Velocity : ", qm42.x_high_freq_rms_acceleration)
 					var vibData *Vibration = &Vibration{
-						Id: id,
+						Id:    id,
 						Stime: time.Now().Format("2006-01-01 15:04:05.999"),
-						Data: qm42,
+						Data:  qm42,
 					}
 					file, err := json.MarshalIndent(vibData, "", " ")
 					if err != nil {
@@ -346,8 +352,6 @@ func (m MBClient) RunSimulation() {
 
 				}
 
-
-
 				//time.Sleep(time.Millisecond * 1000)
 			}
 		}
@@ -357,7 +361,7 @@ func (m MBClient) RunSimulation() {
 func randFloats(min, max float64, n int) []float64 {
 	res := make([]float64, n)
 	for i := range res {
-		res[i] = min + rand.Float64() * (max - min)
+		res[i] = min + rand.Float64()*(max-min)
 	}
 	return res
 }
@@ -365,7 +369,7 @@ func randFloats(min, max float64, n int) []float64 {
 func randUint16(min, max int, n int) []uint16 {
 	res := make([]uint16, n)
 	for i := range res {
-		res[i] = uint16(rand.Intn(max - min + 1)) + uint16(min)
+		res[i] = uint16(rand.Intn(max-min+1)) + uint16(min)
 	}
 	return res
 }
