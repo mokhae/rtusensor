@@ -180,7 +180,7 @@ func (m MBClient) Run() {
 				for i := 0; i < len(sensorid); i++ {
 					sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
 					id := byte(sensor_id)
-					log.Println("ID ", id)
+					//log.Println("ID ", id)
 					/*
 						handler.SlaveId = id
 
@@ -197,13 +197,13 @@ func (m MBClient) Run() {
 
 
 					*/
-					trace := true
+					trace := false
 					var responsePause int = 100
 
 					select {
 
 					case <-ticker.C:
-						log.Println(fmt.Sprintf("Reading Start: %d", id))
+						//log.Println(fmt.Sprintf("Reading Start: %d", id))
 						results, readErr := modbusclient.RTURead(ctx, id, modbusclient.FUNCTION_READ_HOLDING_REGISTERS, startAddress, quantity, responsePause, trace)
 						if readErr != nil {
 							log.Println(fmt.Sprintf("Reading error: %s", readErr))
@@ -356,12 +356,12 @@ func (m MBClient) RunSimulation() {
 			for i := 0; i < len(sensorid); i++ {
 				sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
 				id := byte(sensor_id)
-				log.Println("ID ", id)
+				//log.Println("ID ", id)
 
 				select {
 
 				case <-ticker.C:
-					log.Println(fmt.Sprintf("Reading Start: %d", id))
+					//log.Println(fmt.Sprintf("Reading Start: %d", id))
 
 					results := randUint16(0, 65535, 22)
 
