@@ -240,31 +240,30 @@ func (m MBClient) Run() {
 								Z_high_freq_rms_acceleration: binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}),
 								X_high_freq_rms_acceleration: binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}),
 							}
-						} else {
-							qm42.mqtt = qm42vt2{
-								Z_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}), 10000, 4),
-								Z_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}), 1000, 3),
-								Temp_dF:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}), 100, 2),
-								Temp_dC:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}), 100, 2),
-								X_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}), 10000, 4),
-								X_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}), 1000, 3),
-								Z_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}), 1000, 3),
-								X_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}), 1000, 3),
-								Z_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}), 10, 1),
-								X_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}), 10, 1),
-								Z_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}), 1000, 3),
-								X_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}), 1000, 3),
-								Z_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}), 1000, 3),
-								X_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}), 1000, 3),
-								Z_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}), 1000, 3),
-								X_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}), 1000, 3),
-								Z_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}), 10000, 4),
-								Z_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}), 1000, 3),
-								X_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}), 10000, 4),
-								X_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}), 1000, 3),
-								Z_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}), 1000, 3),
-								X_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}), 1000, 3),
-							}
+						}
+						qm42.mqtt = qm42vt2{
+							Z_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}), 10000, 4),
+							Z_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}), 1000, 3),
+							Temp_dF:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}), 100, 2),
+							Temp_dC:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}), 100, 2),
+							X_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}), 10000, 4),
+							X_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}), 1000, 3),
+							Z_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}), 1000, 3),
+							X_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}), 1000, 3),
+							Z_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}), 10, 1),
+							X_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}), 10, 1),
+							Z_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}), 1000, 3),
+							X_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}), 1000, 3),
+							Z_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}), 1000, 3),
+							X_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}), 1000, 3),
+							Z_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}), 1000, 3),
+							X_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}), 1000, 3),
+							Z_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}), 10000, 4),
+							Z_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}), 1000, 3),
+							X_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}), 10000, 4),
+							X_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}), 1000, 3),
+							Z_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}), 1000, 3),
+							X_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}), 1000, 3),
 						}
 
 						//log.Println("Z Axis Velocity : ", qm42.x_high_freq_rms_acceleration)
@@ -275,26 +274,27 @@ func (m MBClient) Run() {
 							if err != nil {
 								log.Fatal(err)
 							}
-						} else {
-							var vibData *Vibration = &Vibration{
-								Id:    id,
-								Stime: time.Now().Format("2006-01-01 15:04:05"),
-								Data:  qm42.mqtt,
+
+							m.Buffer <- string(file)
+
+							if outFlag {
+
+								_ = ioutil.WriteFile(outFile, file, 0644)
 							}
-							file, err = json.MarshalIndent(vibData, "", " ")
-							if err != nil {
-								log.Fatal(err)
-							}
+
+						}
+
+						var vibData *Vibration = &Vibration{
+							Id:    id,
+							Stime: time.Now().Format("2006-01-01 15:04:05"),
+							Data:  qm42.mqtt,
+						}
+						file, err = json.MarshalIndent(vibData, "", " ")
+						if err != nil {
+							log.Fatal(err)
 						}
 
 						//log.Println("Modbus ID : ", id, string(file))
-
-						m.Buffer <- string(file)
-
-						if outFlag {
-
-							_ = ioutil.WriteFile(outFile, file, 0644)
-						}
 
 					}
 
