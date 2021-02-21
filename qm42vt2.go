@@ -275,8 +275,6 @@ func (m MBClient) Run() {
 								log.Fatal(err)
 							}
 
-							m.Buffer <- string(file)
-
 							if outFlag {
 
 								_ = ioutil.WriteFile(outFile, file, 0644)
@@ -293,7 +291,7 @@ func (m MBClient) Run() {
 						if err != nil {
 							log.Fatal(err)
 						}
-
+						m.Buffer <- string(file)
 						//log.Println("Modbus ID : ", id, string(file))
 
 					}
