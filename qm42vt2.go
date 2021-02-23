@@ -98,6 +98,12 @@ type MBClient struct {
 
 func convStringData(data uint16, decimalNum uint16, decimalPoint uint16) string {
 
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Error convStringData : ", err)
+		}
+	}()
+
 	var ret string
 	floatData := float64(data) / float64(decimalNum)
 	//log.Println("Data : ", floatData)
@@ -272,12 +278,17 @@ func (m MBClient) Run() {
 						if m.useTurckCloud {
 							file, err = json.MarshalIndent(qm42.cloud, "", " ")
 							if err != nil {
-								log.Fatal(err)
+								log.Println("Turck Cloud Json Marshal Error : Modbus ID : ", id, err)
+
 							}
 
 							if outFlag {
 
-								_ = ioutil.WriteFile(outFile, file, 0644)
+								err = ioutil.WriteFile(outFile, file, 0644)
+								if err != nil {
+									log.Println("Turck Cloud Json Write Error : Modbus ID : ", id, err)
+
+								}
 							}
 
 						}
@@ -289,7 +300,8 @@ func (m MBClient) Run() {
 						}
 						file, err = json.MarshalIndent(vibData, "", " ")
 						if err != nil {
-							log.Fatal(err)
+							log.Println("Vibration Json Marshal Error : Modbus ID : ", id, err)
+
 						}
 						m.Buffer <- string(file)
 						//log.Println("Modbus ID : ", id, string(file))
@@ -397,14 +409,20 @@ func (m MBClient) RunSimulation() {
 					}
 					file, err := json.MarshalIndent(vibData, "", " ")
 					if err != nil {
-						log.Fatal(err)
+						log.Println("Vibration Json Marshal Error : Modbus ID : ", id, err)
+
 					}
 					//log.Println("Modbus ID : ", id, string(file))
 
 					m.Buffer <- string(file)
+
 					if outFlag {
 
-						_ = ioutil.WriteFile(outFile, file, 0644)
+						err = ioutil.WriteFile(outFile, file, 0644)
+						if err != nil {
+							log.Println("Outfile write Error : Modbus ID : ", id, err)
+
+						}
 					}
 
 				}
@@ -424,6 +442,13 @@ func randFloats(min, max float64, n int) []float64 {
 }
 
 func randUint16(min, max int, n int) []uint16 {
+
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println(err)
+		}
+	}()
+
 	res := make([]uint16, n)
 	for i := range res {
 		res[i] = uint16(rand.Intn(max-min+1)) + uint16(min)
