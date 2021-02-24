@@ -203,8 +203,8 @@ func (m MBClient) Run() {
 
 
 					*/
-					trace := false
-					var responsePause int = 100
+					trace := true
+					var responsePause int = 1000
 
 					select {
 
