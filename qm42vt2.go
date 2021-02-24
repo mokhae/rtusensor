@@ -174,7 +174,7 @@ func (m MBClient) Run() {
 
 	//timeOut := time.Duration(sensorTimeout) * time.Millisecond
 	ctx, cerr := modbusclient.ConnectRTU(addr, BaudRate)
-	defer modbusclient.DisconnectRTU(ctx)
+	//defer modbusclient.DisconnectRTU(ctx)
 
 	if cerr != nil {
 		log.Println(fmt.Sprintf("RTU Connection error: %s", cerr))
