@@ -205,7 +205,11 @@ func (m MBClient) Run() {
 
 
 					*/
-					trace := true
+					trace := false
+					if logginglevel == "debug" {
+						trace = true
+					}
+
 					var responsePause int = 1000
 
 					select {
