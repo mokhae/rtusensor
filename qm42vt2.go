@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -210,13 +211,38 @@ func (m MBClient) Run() {
 						trace = true
 					}
 
-					var responsePause int = 1000
+					var responsePause int = 500
 
 					select {
 
 					case <-ticker.C:
 						log.Println(fmt.Sprintf("Reading Start: %d", id))
-						results, readErr := modbusclient.RTURead(ctx, id, modbusclient.FUNCTION_READ_HOLDING_REGISTERS, startAddress, quantity, responsePause, trace)
+						wg := new(sync.WaitGroup)
+						wg.Add(1)
+						var results []byte
+						var readErr error
+
+						go func(id byte, responsePause int, trace bool) {
+							defer wg.Done()
+							results, readErr = modbusclient.RTURead(ctx, id, modbusclient.FUNCTION_READ_HOLDING_REGISTERS, startAddress, quantity, responsePause, trace)
+
+						}(id, responsePause, trace)
+						if waitTimeout(wg, time.Second) {
+							log.Println(fmt.Sprintf("Reading timeout error"))
+							modbusclient.DisconnectRTU(ctx)
+							for {
+
+								time.Sleep(2 * time.Second)
+								ctx, cerr = modbusclient.ConnectRTU(addr, BaudRate)
+								if cerr != nil {
+									continue
+								} else {
+									break
+								}
+							}
+							continue
+						}
+
 						if readErr != nil {
 							log.Println(fmt.Sprintf("Reading error: %s", readErr))
 							modbusclient.DisconnectRTU(ctx)
@@ -333,6 +359,20 @@ func (m MBClient) Run() {
 
 	}
 
+}
+
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
+	}
 }
 
 func (m MBClient) RunSimulation() {
