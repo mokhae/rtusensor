@@ -215,7 +215,7 @@ func (m MBClient) Run() {
 					select {
 
 					case <-ticker.C:
-						//log.Println(fmt.Sprintf("Reading Start: %d", id))
+						log.Println(fmt.Sprintf("Reading Start: %d", id))
 						results, readErr := modbusclient.RTURead(ctx, id, modbusclient.FUNCTION_READ_HOLDING_REGISTERS, startAddress, quantity, responsePause, trace)
 						if readErr != nil {
 							log.Println(fmt.Sprintf("Reading error: %s", readErr))
@@ -236,7 +236,7 @@ func (m MBClient) Run() {
 
 						// Data
 						//log.Println("Len : " , len(results))
-						//log.Println("data : " , results)
+						log.Println("data : ", results)
 						var i int = 3
 						var qm42 qmvt2
 						if m.useTurckCloud {
@@ -290,7 +290,7 @@ func (m MBClient) Run() {
 							X_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}), 1000, 3),
 						}
 
-						//log.Println("Z Axis Velocity : ", qm42.x_high_freq_rms_acceleration)
+						log.Println("Z Axis Velocity : ", qm42.mqtt.Z_rms_velocity_mm_per_sec)
 						var file []byte
 						var err error
 						if m.useTurckCloud {
