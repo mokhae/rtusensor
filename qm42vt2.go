@@ -174,6 +174,8 @@ func (m MBClient) Run() {
 
 	//timeOut := time.Duration(sensorTimeout) * time.Millisecond
 	ctx, cerr := modbusclient.ConnectRTU(addr, BaudRate)
+	defer modbusclient.DisconnectRTU(ctx)
+
 	if cerr != nil {
 		log.Println(fmt.Sprintf("RTU Connection error: %s", cerr))
 	} else {
@@ -213,7 +215,19 @@ func (m MBClient) Run() {
 						results, readErr := modbusclient.RTURead(ctx, id, modbusclient.FUNCTION_READ_HOLDING_REGISTERS, startAddress, quantity, responsePause, trace)
 						if readErr != nil {
 							log.Println(fmt.Sprintf("Reading error: %s", readErr))
+							modbusclient.DisconnectRTU(ctx)
+							for {
+
+								time.Sleep(2 * time.Second)
+								ctx, cerr = modbusclient.ConnectRTU(addr, BaudRate)
+								if cerr != nil {
+									continue
+								} else {
+									break
+								}
+							}
 							continue
+
 						}
 
 						// Data
