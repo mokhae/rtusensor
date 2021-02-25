@@ -4,10 +4,11 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/dpapathanasiou/go-modbus"
+	"github.com/goburrow/modbus"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -174,189 +175,192 @@ func (m MBClient) Run() {
 	//handler.Timeout = 2 * time.Second
 
 	//timeOut := time.Duration(sensorTimeout) * time.Millisecond
-	ctx, cerr := modbusclient.ConnectRTU(addr, BaudRate)
+	//ctx, cerr := modbusclient.ConnectRTU(addr, BaudRate)
 	//defer modbusclient.DisconnectRTU(ctx)
 
-	if cerr != nil {
-		log.Println(fmt.Sprintf("RTU Connection error: %s", cerr))
-	} else {
-		ticker := time.NewTicker(time.Millisecond * time.Duration(task_time))
-		for {
-			var sid string = fmt.Sprintf("%v", config["sensor_id"])
+	handler := modbus.NewRTUClientHandler(addr)
+	handler.BaudRate = BaudRate
+	handler.DataBits = DataBits
+	handler.Parity = "N"
+	handler.StopBits = StopBits
 
-			sensorid := strings.Split(sid, ",")
-			if len(sensorid) > 0 {
-				for i := 0; i < len(sensorid); i++ {
-					sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
-					id := byte(sensor_id)
-					//log.Println("ID ", id)
-					/*
-						handler.SlaveId = id
+	handler.Logger = log.New(os.Stdout, "rtusensor: ", log.LstdFlags)
+	err := handler.Connect()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer handler.Close()
 
-						client := modbus.NewClient(handler)
-						log.Println("Modbus RTU Connected ")
-						time.Sleep(time.Millisecond * 200)
-						results, rerr := client.ReadHoldingRegisters(startAddress, quantity)
-						if rerr != nil || results == nil {
-							log.Println(fmt.Sprintf("The First Reading error: %s", rerr))
-							//wg.Done()
-							return
-						}
-						log.Println(fmt.Sprintf("Modbus RTU Reading : %d", len(results)))
+	client := modbus.NewClient(handler)
 
+	ticker := time.NewTicker(time.Millisecond * time.Duration(task_time))
+	for {
+		var sid string = fmt.Sprintf("%v", config["sensor_id"])
 
-					*/
-					trace := false
-					if logginglevel == "debug" {
-						trace = true
+		sensorid := strings.Split(sid, ",")
+		if len(sensorid) > 0 {
+			for i := 0; i < len(sensorid); i++ {
+				sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
+				id := byte(sensor_id)
+				//log.Println("ID ", id)
+				handler.SlaveId = id
+
+				//trace := false
+				//if logginglevel == "debug" {
+				//	trace = true
+				//}
+				//
+				//var responsePause int = 500
+
+				select {
+
+				case <-ticker.C:
+
+					results, readErr := client.ReadHoldingRegisters(startAddress, quantity)
+					if readErr != nil || results == nil {
+						log.Println(fmt.Sprintf("Reading error: %s", readErr))
+						continue
 					}
 
-					var responsePause int = 500
+					//var wg *sync.WaitGroup = new(sync.WaitGroup)
+					//wg.Add(1)
+					//var results []byte
+					//var readErr error
+					//
+					//go func(id byte, responsePause int, trace bool) {
+					//	defer wg.Done()
+					//	log.Println(fmt.Sprintf("Reading Start: %d", id))
+					//	results, readErr = modbusclient.RTURead(ctx, id, modbusclient.FUNCTION_READ_HOLDING_REGISTERS, startAddress, quantity, responsePause, trace)
+					//
+					//}(id, responsePause, trace)
+					//if waitTimeout(wg, 2 * time.Second) {
+					//	log.Println(fmt.Sprintf("Reading timeout error"))
+					//	modbusclient.DisconnectRTU(ctx)
+					//	for {
+					//
+					//		time.Sleep(2 * time.Second)
+					//		ctx, cerr = modbusclient.ConnectRTU(addr, BaudRate)
+					//		if cerr != nil {
+					//			continue
+					//		} else {
+					//			break
+					//		}
+					//	}
+					//	continue
+					//}
 
-					select {
+					//if readErr != nil  || results == nil  {
+					//	log.Println(fmt.Sprintf("Reading error: %s", readErr))
+					//	modbusclient.DisconnectRTU(ctx)
+					//	for {
+					//
+					//		time.Sleep(2 * time.Second)
+					//		ctx, cerr = modbusclient.ConnectRTU(addr, BaudRate)
+					//		if cerr != nil {
+					//			continue
+					//		} else {
+					//			break
+					//		}
+					//	}
+					//	continue
+					//
+					//}
 
-					case <-ticker.C:
-						log.Println(fmt.Sprintf("Reading Start: %d", id))
-						wg := new(sync.WaitGroup)
-						wg.Add(1)
-						var results []byte
-						var readErr error
-
-						go func(id byte, responsePause int, trace bool) {
-							defer wg.Done()
-							results, readErr = modbusclient.RTURead(ctx, id, modbusclient.FUNCTION_READ_HOLDING_REGISTERS, startAddress, quantity, responsePause, trace)
-
-						}(id, responsePause, trace)
-						if waitTimeout(wg, time.Second) {
-							log.Println(fmt.Sprintf("Reading timeout error"))
-							modbusclient.DisconnectRTU(ctx)
-							for {
-
-								time.Sleep(2 * time.Second)
-								ctx, cerr = modbusclient.ConnectRTU(addr, BaudRate)
-								if cerr != nil {
-									continue
-								} else {
-									break
-								}
-							}
-							continue
+					// Data
+					//log.Println("Len : " , len(results))
+					//log.Println("data : ", results)
+					var i int = 0
+					var qm42 qmvt2
+					if m.useTurckCloud {
+						qm42.cloud = qm42vt2_cloud{
+							Z_rms_velocity_in_per_sec:    binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}),
+							Z_rms_velocity_mm_per_sec:    binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}),
+							Temp_dF:                      binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}),
+							Temp_dC:                      binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}),
+							X_rms_velocity_in_per_sec:    binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}),
+							X_rms_velocity_mm_per_sec:    binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}),
+							Z_peak_acceleration:          binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}),
+							X_peak_acceleration:          binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}),
+							Z_peak_velocity_comp_freq:    binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}),
+							X_peak_velocity_comp_freq:    binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}),
+							Z_rms_acceleration:           binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}),
+							X_rms_acceleration:           binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}),
+							Z_kurtosis:                   binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}),
+							X_kurtosis:                   binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}),
+							Z_crest:                      binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}),
+							X_crest:                      binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}),
+							Z_peak_velocity_in_per_sec:   binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}),
+							Z_peak_velocity_mm_per_sec:   binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}),
+							X_peak_velocity_in_per_sec:   binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}),
+							X_peak_velocity_mm_per_sec:   binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}),
+							Z_high_freq_rms_acceleration: binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}),
+							X_high_freq_rms_acceleration: binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}),
 						}
+					}
+					qm42.mqtt = qm42vt2{
+						Z_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}), 10000, 4),
+						Z_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}), 1000, 3),
+						Temp_dF:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}), 100, 2),
+						Temp_dC:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}), 100, 2),
+						X_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}), 10000, 4),
+						X_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}), 1000, 3),
+						Z_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}), 1000, 3),
+						X_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}), 1000, 3),
+						Z_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}), 10, 1),
+						X_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}), 10, 1),
+						Z_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}), 1000, 3),
+						X_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}), 1000, 3),
+						Z_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}), 1000, 3),
+						X_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}), 1000, 3),
+						Z_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}), 1000, 3),
+						X_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}), 1000, 3),
+						Z_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}), 10000, 4),
+						Z_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}), 1000, 3),
+						X_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}), 10000, 4),
+						X_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}), 1000, 3),
+						Z_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}), 1000, 3),
+						X_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}), 1000, 3),
+					}
 
-						if readErr != nil {
-							log.Println(fmt.Sprintf("Reading error: %s", readErr))
-							modbusclient.DisconnectRTU(ctx)
-							for {
-
-								time.Sleep(2 * time.Second)
-								ctx, cerr = modbusclient.ConnectRTU(addr, BaudRate)
-								if cerr != nil {
-									continue
-								} else {
-									break
-								}
-							}
-							continue
-
-						}
-
-						// Data
-						//log.Println("Len : " , len(results))
-						log.Println("data : ", results)
-						var i int = 3
-						var qm42 qmvt2
-						if m.useTurckCloud {
-							qm42.cloud = qm42vt2_cloud{
-								Z_rms_velocity_in_per_sec:    binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}),
-								Z_rms_velocity_mm_per_sec:    binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}),
-								Temp_dF:                      binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}),
-								Temp_dC:                      binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}),
-								X_rms_velocity_in_per_sec:    binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}),
-								X_rms_velocity_mm_per_sec:    binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}),
-								Z_peak_acceleration:          binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}),
-								X_peak_acceleration:          binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}),
-								Z_peak_velocity_comp_freq:    binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}),
-								X_peak_velocity_comp_freq:    binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}),
-								Z_rms_acceleration:           binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}),
-								X_rms_acceleration:           binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}),
-								Z_kurtosis:                   binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}),
-								X_kurtosis:                   binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}),
-								Z_crest:                      binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}),
-								X_crest:                      binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}),
-								Z_peak_velocity_in_per_sec:   binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}),
-								Z_peak_velocity_mm_per_sec:   binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}),
-								X_peak_velocity_in_per_sec:   binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}),
-								X_peak_velocity_mm_per_sec:   binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}),
-								Z_high_freq_rms_acceleration: binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}),
-								X_high_freq_rms_acceleration: binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}),
-							}
-						}
-						qm42.mqtt = qm42vt2{
-							Z_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+0], results[i+1]}), 10000, 4),
-							Z_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+2], results[i+3]}), 1000, 3),
-							Temp_dF:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+4], results[i+5]}), 100, 2),
-							Temp_dC:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+6], results[i+7]}), 100, 2),
-							X_rms_velocity_in_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+8], results[i+9]}), 10000, 4),
-							X_rms_velocity_mm_per_sec:    convStringData(binary.BigEndian.Uint16([]byte{results[i+10], results[i+11]}), 1000, 3),
-							Z_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+12], results[i+13]}), 1000, 3),
-							X_peak_acceleration:          convStringData(binary.BigEndian.Uint16([]byte{results[i+14], results[i+15]}), 1000, 3),
-							Z_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+16], results[i+17]}), 10, 1),
-							X_peak_velocity_comp_freq:    convStringData(binary.BigEndian.Uint16([]byte{results[i+18], results[i+19]}), 10, 1),
-							Z_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+20], results[i+21]}), 1000, 3),
-							X_rms_acceleration:           convStringData(binary.BigEndian.Uint16([]byte{results[i+22], results[i+23]}), 1000, 3),
-							Z_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+24], results[i+25]}), 1000, 3),
-							X_kurtosis:                   convStringData(binary.BigEndian.Uint16([]byte{results[i+26], results[i+27]}), 1000, 3),
-							Z_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+28], results[i+29]}), 1000, 3),
-							X_crest:                      convStringData(binary.BigEndian.Uint16([]byte{results[i+30], results[i+31]}), 1000, 3),
-							Z_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+32], results[i+33]}), 10000, 4),
-							Z_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+34], results[i+35]}), 1000, 3),
-							X_peak_velocity_in_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+36], results[i+37]}), 10000, 4),
-							X_peak_velocity_mm_per_sec:   convStringData(binary.BigEndian.Uint16([]byte{results[i+38], results[i+39]}), 1000, 3),
-							Z_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+40], results[i+41]}), 1000, 3),
-							X_high_freq_rms_acceleration: convStringData(binary.BigEndian.Uint16([]byte{results[i+42], results[i+43]}), 1000, 3),
-						}
-
-						log.Println("Z Axis Velocity : ", qm42.mqtt.Z_rms_velocity_mm_per_sec)
-						var file []byte
-						var err error
-						if m.useTurckCloud {
-							file, err = json.MarshalIndent(qm42.cloud, "", " ")
-							if err != nil {
-								log.Println("Turck Cloud Json Marshal Error : Modbus ID : ", id, err)
-
-							}
-
-							if outFlag {
-
-								err = ioutil.WriteFile(outFile, file, 0644)
-								if err != nil {
-									log.Println("Turck Cloud Json Write Error : Modbus ID : ", id, err)
-
-								}
-							}
-
-						}
-
-						var vibData *Vibration = &Vibration{
-							Id:    id,
-							Stime: time.Now().Format("2006-01-01 15:04:05"),
-							Data:  qm42.mqtt,
-						}
-						file, err = json.MarshalIndent(vibData, "", " ")
+					//log.Println("Z Axis Velocity : ", qm42.mqtt.Z_rms_velocity_mm_per_sec)
+					var file []byte
+					var err error
+					if m.useTurckCloud {
+						file, err = json.MarshalIndent(qm42.cloud, "", " ")
 						if err != nil {
-							log.Println("Vibration Json Marshal Error : Modbus ID : ", id, err)
+							log.Println("Turck Cloud Json Marshal Error : Modbus ID : ", id, err)
 
 						}
-						m.Buffer <- string(file)
-						//log.Println("Modbus ID : ", id, string(file))
+
+						if outFlag {
+
+							err = ioutil.WriteFile(outFile, file, 0644)
+							if err != nil {
+								log.Println("Turck Cloud Json Write Error : Modbus ID : ", id, err)
+
+							}
+						}
 
 					}
 
-					//time.Sleep(time.Millisecond * 1000)
+					var vibData *Vibration = &Vibration{
+						Id:    id,
+						Stime: time.Now().Format("2006-01-01 15:04:05"),
+						Data:  qm42.mqtt,
+					}
+					file, err = json.MarshalIndent(vibData, "", " ")
+					if err != nil {
+						log.Println("Vibration Json Marshal Error : Modbus ID : ", id, err)
+
+					}
+					m.Buffer <- string(file)
+					//log.Println("Modbus ID : ", id, string(file))
+
 				}
+
+				//time.Sleep(time.Millisecond * 1000)
 			}
 		}
-
 	}
 
 }
