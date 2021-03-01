@@ -26,7 +26,7 @@ var (
 	logginglevel  string
 	outFile       string
 	outFlag       bool
-	sensorTimeout float64
+	sensorTimeout int64
 	startAddress  uint16
 	quantity      uint16
 )
@@ -146,7 +146,7 @@ func (m MBClient) Run() {
 	logginglevel = fmt.Sprintf("%v", config["logging_level"])
 	outFile = fmt.Sprintf("%v", config["output_file_json"])
 	outFlag, _ = strconv.ParseBool(fmt.Sprintf("%v", config["write_output_file_json"]))
-	sensorTimeout, _ = strconv.ParseFloat(fmt.Sprintf("%v", config["sensor_timeout"]), 64)
+	sensorTimeout, _ = strconv.ParseInt(fmt.Sprintf("%v", config["sensor_timeout"]), 10, 64)
 
 	startAddress32, _ := strconv.ParseUint(fmt.Sprintf("%v", config["start_address"]), 10, 32)
 	startAddress = uint16(startAddress32)
@@ -183,7 +183,7 @@ func (m MBClient) Run() {
 	handler.DataBits = DataBits
 	handler.Parity = "N"
 	handler.StopBits = StopBits
-
+	handler.Timeout = time.Duration(sensorTimeout) * time.Millisecond
 	handler.Logger = log.New(os.Stdout, "rtusensor: ", log.LstdFlags)
 	err := handler.Connect()
 	if err != nil {
@@ -195,26 +195,20 @@ func (m MBClient) Run() {
 
 	ticker := time.NewTicker(time.Millisecond * time.Duration(task_time))
 	for {
-		var sid string = fmt.Sprintf("%v", config["sensor_id"])
 
-		sensorid := strings.Split(sid, ",")
-		if len(sensorid) > 0 {
-			for i := 0; i < len(sensorid); i++ {
-				sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
-				id := byte(sensor_id)
-				//log.Println("ID ", id)
-				handler.SlaveId = id
+		select {
 
-				//trace := false
-				//if logginglevel == "debug" {
-				//	trace = true
-				//}
-				//
-				//var responsePause int = 500
+		case <-ticker.C:
 
-				select {
+			var sid string = fmt.Sprintf("%v", config["sensor_id"])
 
-				case <-ticker.C:
+			sensorid := strings.Split(sid, ",")
+			if len(sensorid) > 0 {
+				for i := 0; i < len(sensorid); i++ {
+					sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
+					id := byte(sensor_id)
+					//log.Println("ID ", id)
+					handler.SlaveId = id
 
 					results, readErr := client.ReadHoldingRegisters(startAddress, quantity)
 					if readErr != nil || results == nil {
@@ -356,11 +350,11 @@ func (m MBClient) Run() {
 					m.Buffer <- string(file)
 					//log.Println("Modbus ID : ", id, string(file))
 
+					//time.Sleep(time.Millisecond * 1000)
 				}
-
-				//time.Sleep(time.Millisecond * 1000)
 			}
 		}
+
 	}
 
 }
@@ -394,7 +388,7 @@ func (m MBClient) RunSimulation() {
 	logginglevel = fmt.Sprintf("%v", config["logging_level"])
 	outFile = fmt.Sprintf("%v", config["output_file_json"])
 	outFlag, _ = strconv.ParseBool(fmt.Sprintf("%v", config["write_output_file_json"]))
-	sensorTimeout, _ = strconv.ParseFloat(fmt.Sprintf("%v", config["sensor_timeout"]), 64)
+	sensorTimeout, _ = strconv.ParseInt(fmt.Sprintf("%v", config["sensor_timeout"]), 10, 64)
 
 	startAddress32, _ := strconv.ParseUint(fmt.Sprintf("%v", config["start_address"]), 10, 32)
 	startAddress = uint16(startAddress32)
@@ -423,19 +417,18 @@ func (m MBClient) RunSimulation() {
 
 	ticker := time.NewTicker(time.Millisecond * time.Duration(task_time))
 	for {
-		var sid string = fmt.Sprintf("%v", config["sensor_id"])
 
-		sensorid := strings.Split(sid, ",")
-		if len(sensorid) > 0 {
-			for i := 0; i < len(sensorid); i++ {
-				sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
-				id := byte(sensor_id)
-				//log.Println("ID ", id)
+		select {
 
-				select {
+		case <-ticker.C:
+			var sid string = fmt.Sprintf("%v", config["sensor_id"])
 
-				case <-ticker.C:
-					//log.Println(fmt.Sprintf("Reading Start: %d", id))
+			sensorid := strings.Split(sid, ",")
+			if len(sensorid) > 0 {
+				for i := 0; i < len(sensorid); i++ {
+					sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
+					id := byte(sensor_id)
+					//log.Println("ID ", id)
 
 					results := randUint16(0, 65535, 22)
 
@@ -487,11 +480,11 @@ func (m MBClient) RunSimulation() {
 						}
 					}
 
+					//time.Sleep(time.Millisecond * 1000)
 				}
-
-				//time.Sleep(time.Millisecond * 1000)
 			}
 		}
+
 	}
 }
 
