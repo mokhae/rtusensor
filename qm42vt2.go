@@ -339,7 +339,7 @@ func (m MBClient) Run() {
 
 					var vibData *Vibration = &Vibration{
 						Id:    id,
-						Stime: time.Now().Format("2006-01-01 15:04:05"),
+						Stime: time.Now().Format("2006-01-02 15:04:05.999"),
 						Data:  qm42.mqtt,
 					}
 					file, err = json.MarshalIndent(vibData, "", " ")
@@ -459,7 +459,7 @@ func (m MBClient) RunSimulation() {
 					//log.Println("Z Axis Velocity : ", qm42.x_high_freq_rms_acceleration)
 					var vibData *Vibration = &Vibration{
 						Id:    id,
-						Stime: time.Now().Format("2006-01-01 15:04:05.999"),
+						Stime: time.Now().Format("2006-01-02 15:04:05.999"),
 						Data:  qm42,
 					}
 					file, err := json.MarshalIndent(vibData, "", " ")
