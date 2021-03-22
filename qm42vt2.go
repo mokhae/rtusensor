@@ -87,6 +87,7 @@ type qmvt2 struct {
 }
 
 type Vibration struct {
+	Seq   int     `json:"seq"`
 	Id    byte    `json:"id"`
 	Stime string  `json:"stime"`
 	Data  qm42vt2 `json:"data"`
@@ -204,8 +205,8 @@ func (m MBClient) Run() {
 
 			sensorid := strings.Split(sid, ",")
 			if len(sensorid) > 0 {
-				for i := 0; i < len(sensorid); i++ {
-					sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[i]), 10, 32)
+				for idx := 0; idx < len(sensorid); idx++ {
+					sensor_id, _ := strconv.ParseUint(strings.TrimSpace(sensorid[idx]), 10, 32)
 					id := byte(sensor_id)
 					//log.Println("ID ", id)
 					handler.SlaveId = id
@@ -338,6 +339,7 @@ func (m MBClient) Run() {
 					}
 
 					var vibData *Vibration = &Vibration{
+						Seq:   idx,
 						Id:    id,
 						Stime: time.Now().Format("2006-01-02 15:04:05.999"),
 						Data:  qm42.mqtt,
