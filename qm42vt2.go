@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -185,7 +184,8 @@ func (m MBClient) Run() {
 	handler.Parity = "N"
 	handler.StopBits = StopBits
 	handler.Timeout = time.Duration(sensorTimeout) * time.Millisecond
-	handler.Logger = log.New(os.Stdout, "rtusensor: ", log.LstdFlags)
+	//handler.Logger = log.New(os.Stdout, "rtusensor: ", log.LstdFlags)
+
 	err := handler.Connect()
 	if err != nil {
 		log.Fatal(err)
